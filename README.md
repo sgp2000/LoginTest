@@ -37,13 +37,31 @@
 - `.github/workflows/ci.yml` — GitHub Actions：推送即自动打包 debug APK
 
 ## 没有 Android Studio？用 GitHub Actions 云端出包
-1. 把 `LoginTest` 目录推送到 GitHub 仓库（分支 main）
-2. 打开仓库 `Actions` 页签，`build-apk` 流水线自动运行
-3. 运行完成后在 Summary 页下载 artifact `app-debug-apk`，即为可直接安装的 APK
+仓库：https://github.com/sgp2000/LoginTest（公开）
+
+1. 把 `LoginTest` 目录推送到 GitHub 仓库（分支 main），`build-apk` 流水线自动运行
+2. 打开仓库 `Actions` 页签 → 进入成功的运行记录 → 页面底部 `Artifacts` 下载
+   `app-debug-apk.zip` → 解压得到 `app-debug.apk`，可直接安装（约 7 MB）
    （无需任何签名 / Secrets 配置，debug 包自动使用调试签名）
+3. 也可点页面右上角 `Re-run all jobs` 重新出包
+
+**首次成功运行**：https://github.com/sgp2000/LoginTest/actions/runs/41967196996
+
+CI 关键配置（`.github/workflows/ci.yml`）：
+- `runs-on: ubuntu-24.04`（`ubuntu-latest` 已切 Ubuntu 26 新镜像，预装 SDK 不可靠）
+- 用 `$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager` 安装 `platforms;android-34` 与 `build-tools;34.0.0`
+- JDK 17 + Gradle 8.7，构建失败时把 Gradle 错误写成 annotations 便于定位
+
+## 本机推送说明（国内网络）
+本机 `github.com:443` 直连不通，需走代理。仓库本地已配置：
+```
+git config http.proxy http://127.0.0.1:7897   # 本机 Clash/Mihomo 端口
+git config http.version HTTP/1.1              # 规避 TLS 连接被重置
+```
+代理软件关闭后推送会失败，可 `git config --local --unset http.proxy` 恢复默认。
 
 ## 注意
-- 本环境无 Android SDK，无法直接编译出 APK，需在本地 Android Studio / CI 机器构建
+- `gradle.properties` 中的 `android.useAndroidX=true` 是必需项，缺失会导致 `:app:checkDebugAarMetadata` 失败
 - 目标 URL 为 http 明文地址，已在 Manifest 开启 `usesCleartextTraffic` 以保证 WebView 兜底可用
 - 当前凭据硬编码在客户端，仅适合功能演示；真实业务务必改为服务端接口校验 + HTTPS
 
