@@ -37,7 +37,17 @@ jobs:
           gradle-version: '8.7'
 
       - name: Build debug APK
-        run: gradle assembleDebug --stacktrace
+        run: |
+          set +e
+          gradle assembleDebug --stacktrace 2>&1 | tee build.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            echo "=== GRADLE ERROR SUMMARY ==="
+            grep -nE "FAILURE|What went wrong|error:|^e: |Caused by|Could not|Exception|FAILED|^> Task|SDK location|license" build.log | tail -60 | while IFS= read -r line; do
+              echo "::error::$line"
+            done
+            exit "$rc"
+          fi
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
